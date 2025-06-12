@@ -2,6 +2,28 @@ from models import Position, Direction, GameState, Perception
 from environment import WumpusEnvironment
 import random
 import heapq
+import json
+
+# Modify the `save_json` method to handle non-serializable objects
+class KnowledgeBase:
+    def __init__(self):
+        self.log = []
+
+    def tell(self, entry):
+        self.log.append(entry)
+
+    def save_json(self, filename):
+        def serialize(obj):
+            if isinstance(obj, Perception):
+                return {
+                    'stench': obj.stench,
+                    'breeze': obj.breeze,
+                    'glitter': obj.glitter
+                }
+            return obj
+
+        with open(filename, 'w') as f:
+            json.dump(self.log, f, indent=2, default=serialize)
 
 class EnhancedAgent:
     def __init__(self, risk_prob=0.25, risk_threshold=5):
@@ -22,6 +44,9 @@ class EnhancedAgent:
         self.wumpus_inferred = False
         self.wumpus_location = None
         self.risky_target = None
+        self.belief_pit = {}
+        self.belief_wumpus = {}
+        self.kb = KnowledgeBase()
 
     def neighbors(self, x, y):
         for d, (dx, dy) in enumerate([(1, 0), (0, 1), (-1, 0), (0, -1)]):
@@ -158,6 +183,41 @@ class EnhancedAgent:
                     return "MOVE_SOUTH"
         # If no unknowns left or all are unsafe, climb out
         return "CLIMB"
+
+    def update_beliefs(self, perception):
+        stench, breeze, glitter = perception.stench, perception.breeze, perception.glitter
+        neighbors = list(self.neighbors(self.x, self.y))
+
+        for cell in self.unknown:
+            prior_pit = self.belief_pit.get(cell, 1 / len(self.unknown))
+            prior_wumpus = self.belief_wumpus.get(cell, 1 / len(self.unknown))
+
+            likelihood_pit = 1 if breeze and cell in neighbors else 0
+            likelihood_wumpus = 1 if stench and cell in neighbors else 0
+
+            self.belief_pit[cell] = prior_pit * likelihood_pit
+            self.belief_wumpus[cell] = prior_wumpus * likelihood_wumpus
+
+        # Normalize beliefs
+        pit_sum = sum(self.belief_pit.values())
+        wumpus_sum = sum(self.belief_wumpus.values())
+
+        if pit_sum > 0:
+            for cell in self.belief_pit:
+                self.belief_pit[cell] /= pit_sum
+
+        if wumpus_sum > 0:
+            for cell in self.belief_wumpus:
+                self.belief_wumpus[cell] /= wumpus_sum
+
+    def log_knowledge(self, perception):
+        self.kb.tell({
+            'position': (self.x, self.y),
+            'perception': perception,
+            'belief_pit': self.belief_pit,
+            'belief_wumpus': self.belief_wumpus
+        })
+        self.kb.save_json('knowledge_base.json')
 
     def update_position(self, action, environment):
         bump = scream = False

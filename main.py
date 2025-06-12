@@ -3,6 +3,7 @@ import sys
 from environment import WumpusEnvironment
 from agent import EnhancedAgent
 from models import Position, Direction
+from agent import KnowledgeBase
 
 
 class WumpusGame:
@@ -25,6 +26,8 @@ class WumpusGame:
         self.agent.dir = Direction.EAST
         self.font = pygame.font.Font(None, 36)
         self.wumpus_dead = False
+        # Initialize knowledge base
+        self.agent.kb = KnowledgeBase()
 
     def draw_symbol(self, symbol, surface, cx, cy, *, wumpus_dead=False):
         """
@@ -224,6 +227,17 @@ class WumpusGame:
                             else:
                                 death_message = "You climbed out without the gold."
                             running = False
+                        # Log percepts and actions during the game loop
+                        pos = Position(x=self.agent.x, y=self.agent.y)
+                        perception = self.env.get_perception(pos)
+                        self.agent.kb.tell({
+                            'position': (self.agent.x, self.agent.y),
+                            'action': action,
+                            'perception': perception,
+                            'belief_pit': self.agent.belief_pit,
+                            'belief_wumpus': self.agent.belief_wumpus
+                        })
+                        self.agent.kb.save_json('knowledge_base.json')
             self.draw()
             clock.tick(60)
         if death_message:

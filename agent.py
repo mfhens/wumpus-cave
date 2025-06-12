@@ -3,6 +3,7 @@ from environment import WumpusEnvironment
 import random
 import heapq
 import json
+import os
 
 # Modify the `save_json` method to handle non-serializable objects
 class KnowledgeBase:
@@ -22,7 +23,9 @@ class KnowledgeBase:
                 }
             return obj
 
-        with open(filename, 'w') as f:
+        temp_dir = os.getenv('TEMP', '/tmp')
+        file_path = os.path.join(temp_dir, filename)
+        with open(file_path, 'w') as f:
             json.dump(self.log, f, indent=2, default=serialize)
 
 class EnhancedAgent:

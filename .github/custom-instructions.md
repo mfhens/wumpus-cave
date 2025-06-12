@@ -56,6 +56,11 @@ Balance risk and reward when chosing an action
 - The agent perceives its surroundings using sensors (breeze, stench, glitter, bump, scream).
 - The agent uses A* search and inference to decide actions, balancing risk and reward.
 
+## Agent Capabilities
+- The agent now includes a Bayesian risk assessment mechanism to evaluate probabilities of hazards dynamically.
+- The agent integrates a `KnowledgeBase` to log percepts, actions, and belief updates, which are saved in JSON format for traceability.
+- The agent uses normalized Bayesian inference to update beliefs about pits and Wumpus locations based on percepts.
+
 ## Visualization
 - Use `pygame` to render the game grid and symbols for perceptions and features:
   - Breeze: Blue circle
